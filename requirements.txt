@@ -1,1 +1,4 @@
-{dependências dos projetos que envolverem programação}
+streamlit==1.51.0
+pympi-ling==1.71
+pandas==2.3.3
+
