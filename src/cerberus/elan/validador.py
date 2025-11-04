@@ -1,7 +1,7 @@
 import collections
 import re
 from itertools import permutations
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import pympi
 
@@ -24,33 +24,14 @@ def _valida_regra(nome_trilha: str, regra: Dict[str, Any]) -> bool:
     
     return False
 
-def valida_id_trilhas(eaf: pympi.Elan.Eaf, regras: Dict[str, Any]) -> Tuple[bool, List[str]]:
+def valida_id_trilhas(eaf: pympi.Elan.Eaf, regras: Dict[str, Any]) -> Tuple[bool, List[str], Optional[Dict[str, str]]]:
     """
     Valida as trilhas (tiers) de um objeto Eaf contra um conjunto de regras.
-
-    A estrutura do dicionário 'regras' deve ser:
-    {
-        "num_trilhas": int (opcional),  # Número exato de trilhas esperado
-        "maiusculas": bool (opcional), # Se TODAS as trilhas devem ser maiúsculas
-        "regras_trilhas": [  # (opcional) Lista de regras, uma para cada trilha
-            {"type": "exato", "value": "NOME_EXATO"},
-            {"type": "comeca", "value": "PREFIXO"},
-            {"type": "termina", "value": "SUFIXO"},
-            {"type": "contem", "value": "PARTE"},
-            {"type": "regex", "value": r"^[A-Z]+\d[A-Z]+$"}
-        ]
-    }
-
-    Args:
-        eaf (pympi.Elan.Eaf): O objeto Eaf a ser validado.
-        regras (Dict[str, Any]): O dicionário de regras.
-
-    Returns:
-        Tuple[bool, List[str]]: (True, []) se for válido, 
-                                 (False, [lista_de_erros]) se for inválido.
+    Retorna (Sucesso, ListaDeErros, MapeamentoDeConteudo).
     """
     trilhas_presentes = list(eaf.get_tier_names())
     erros = []
+    mapeamento_conteudo = None
 
     num_trilhas_esperado = regras.get("num_trilhas")
     num_trilhas_encontrado = len(trilhas_presentes)
@@ -65,33 +46,41 @@ def valida_id_trilhas(eaf: pympi.Elan.Eaf, regras: Dict[str, Any]) -> Tuple[bool
                 erros.append(f"A trilha '{trilha}' não está em maiúsculas.")
     
     regras_trilhas = regras.get("regras_trilhas", [])
-    
     if not regras_trilhas:
-        return (not erros, erros)
+        return (not erros, erros, None)
 
     num_regras_trilha = len(regras_trilhas)
 
-    if num_trilhas_encontrado == num_regras_trilha:
-        permutacao_valida = False
-        for perm in permutations(trilhas_presentes):
-            status_permutacao = True
-            
-            for i, nome_trilha in enumerate(perm):
-                rule = regras_trilhas[i]
-                if not _valida_regra(nome_trilha, rule):
-                    status_permutacao = False
-                    break 
-            
-            if status_permutacao:
-                permutacao_valida = True
+    if num_trilhas_encontrado != num_regras_trilha:
+        erros.append(f"O número de trilhas ({num_trilhas_encontrado}) não corresponde ao número de regras de trilha ({num_regras_trilha}).")
+        return (False, erros, None)
+        
+    permutacao_valida = False
+    for perm in permutations(trilhas_presentes):
+        status_permutacao = True
+        mapeamento_temp = {}
+        
+        for i, nome_trilha in enumerate(perm):
+            rule = regras_trilhas[i]
+            if not _valida_regra(nome_trilha, rule):
+                status_permutacao = False
                 break 
+            
+            content_type = rule.get("content_type")
+            if content_type:
+                mapeamento_temp[nome_trilha] = content_type
+        
+        if status_permutacao:
+            permutacao_valida = True
+            mapeamento_conteudo = mapeamento_temp
+            break 
 
-        if not permutacao_valida:
-            erros.append("Não foi encontrada uma combinação válida que satisfaça todas as regras de trilha.")
-            erros.append(f"   Trilhas Encontradas: {trilhas_presentes}")
-            erros.append(f"   Regras a aplicar: {regras_trilhas}")
+    if not permutacao_valida:
+        erros.append("Não foi encontrada uma combinação válida que satisfaça todas as regras de trilha.")
+        erros.append(f"   Trilhas Encontradas: {trilhas_presentes}")
+        erros.append(f"   Regras a aplicar: {regras_trilhas}")
 
-    return (not erros, erros)
+    return (not erros, erros, mapeamento_conteudo if not erros else None)
    
 def _valida_conteudo_disf(valor: str) -> List[str]:
     """Valida o conteúdo de uma anotação de uma trilha DISF, retornando códigos de erro."""
