@@ -11,7 +11,6 @@ st.set_page_config(
     page_title="Cerberus",
     layout="wide",
 )
-st.image('https://github.com/lamid-ufs/ASPBr/blob/main/src/streamlit/imgs/lamid-logo-full.png?raw=true', width=200)
 
 regras_validacao_trilhas = {
     "num_trilhas": 3, 
@@ -24,10 +23,11 @@ regras_validacao_trilhas = {
 }
 
 st.markdown("""
-            ## Validação de transcrições ELAN (.eaf).
+            ## Cerberus 
+            #### Validador de transcrições ELAN (.eaf)
             """)
 
-with st.expander(label="**Instruções de uso**"):
+with st.expander(label="**Instruções de uso**", expanded=True):
     st.markdown("""
         1. **Seleção do Arquivo**: Use o seletor de arquivos abaixo para carregar um arquivo `.eaf` do seu computador.
         2. **Validação**: Após o upload, o sistema irá automaticamente validar os identificadores das trilhas e todas as transcrições contidas no arquivo. Todas as normas de transcrição podem ser encontradas em: [Normas de transcrição - GELINS]().
@@ -106,6 +106,8 @@ if uploaded_file is not None:
             st.error(f"Ocorreu um erro crítico ao processar o arquivo:")
             st.exception(e)
 
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.divider()
 colunas = st.columns([3, 0.5])
 colunas[0].image('https://github.com/lamid-ufs/ASPBr/blob/main/src/streamlit/imgs/lamid-logo-full.png?raw=true', width=150)
 colunas[1].caption("Desenvolvido por:<br>Túlio Gois & Nayla Chagas", unsafe_allow_html=True)
