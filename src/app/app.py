@@ -30,7 +30,7 @@ st.markdown("""
 with st.expander(label="**Instruções de uso**", expanded=True):
     st.markdown("""
         1. **Seleção do Arquivo**: Use o seletor de arquivos abaixo para carregar um arquivo `.eaf` do seu computador.
-        2. **Validação**: Após o upload, o sistema irá automaticamente validar os identificadores das trilhas e todas as transcrições contidas no arquivo. Todas as normas de transcrição podem ser encontradas em: [Normas de transcrição - GELINS]().
+        2. **Validação**: Após o upload, o sistema irá automaticamente validar os identificadores das trilhas e todas as transcrições contidas no arquivo. Todas as normas de transcrição podem ser encontradas em: [Normas de transcrição - GELINS](https://github.com/tuliosg/cerberus/blob/dev/docs/normas%20de%20transcrição%20GELINS.pdf).
         3. **Resultados**: O resultado da validação será exibido na tela no formato de um relatório.
     """
     )
