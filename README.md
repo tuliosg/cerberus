@@ -23,9 +23,10 @@ Dependências para executar os códigos da pasta `src`.
 ## Como citar?
 Para citar este repositório, utilize a referência abaixo:
 ```
-@software{tulio_2026_18213587,
-  author       = {Túlio},
-  title        = {tuliosg/cerberus: cerberus v0.1},
+@software{gois_2026_18213587,
+  author       = {Gois, Túlio and
+                  Chagas, Nayla Sahra Santos das},
+  title        = {cerberus},
   month        = jan,
   year         = 2026,
   publisher    = {Zenodo},
