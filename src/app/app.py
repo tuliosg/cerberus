@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide",
 )
 
-regras_validacao_trilhas = {
+regras_entrevista = {
     "num_trilhas": 3, 
     "maiusculas": True,
     "regras_trilhas": [
@@ -52,7 +52,7 @@ if uploaded_file is not None:
             nome_arquivo, eaf = elan.abre_eaf(file_bytes, uploaded_file.name)
             
             # --- Etapa 1: Validação de IDs ---
-            id_valido, id_erros, mapeamento_conteudo = elan.valida_id_trilhas(eaf, regras_validacao_trilhas)
+            id_valido, id_erros, mapeamento_conteudo = elan.valida_id_trilhas(eaf, regras_entrevista)
             
             relatorio_texto += "--- RESULTADO DA VALIDAÇÃO DE IDS ---\n"
             st.markdown("##### Resultados da Validação de IDs")
