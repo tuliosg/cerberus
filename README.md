@@ -5,7 +5,7 @@
   <br/>
 
 # *cerberus*
-> Túlio Gois <a href="https://orcid.org/0009-0000-5270-8033" target="blank"><img align="top" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/ORCID_iD.svg/2048px-ORCID_iD.svg.png" alt="tuliosg" height="16" width="16" /></a>
+> Túlio Gois <a href="https://orcid.org/0009-0000-5270-8033" target="blank"><img align="top" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/ORCID_iD.svg/2048px-ORCID_iD.svg.png" alt="tuliosg" height="16" width="16" /></a>; Nayla Chagas <a href="https://orcid.org/0009-0004-8268-5484" target="blank"><img align="top" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/ORCID_iD.svg/2048px-ORCID_iD.svg.png" alt="nayla" height="16" width="16" /></a>
 
 Validador de transcrições de entrevistas sociolinguísticas, elaborado para o Laboratório Multiusuário de Informática e Documentação Linguística (LAMID/UFS).
 
