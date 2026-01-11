@@ -1,33 +1,50 @@
 import collections
 import re
-from itertools import permutations
+from itertools import permutations, combinations
 from typing import Any, Dict, List, Tuple, Optional
 
 import pympi
 
-
 def _valida_regra(nome_trilha: str, regra: Dict[str, Any]) -> bool:
-    """Função auxiliar para checar um nome de trilha contra uma regra específica."""
+    """
+    Função auxiliar para checar um nome de trilha contra uma regra específica.
+
+    :param nome_trilha: O nome da trilha a ser validada.
+    :type nome_trilha: str
+    :param regra: Dicionário contendo o tipo ('type') e o valor ('value') da regra.
+    :type regra: Dict[str, Any]
+    :return: True se a trilha satisfaz a regra, False caso contrário.
+    :rtype: bool
+    """
     tipo_regra = regra.get("type")
-    regra = regra.get("value")
+    regra_valor = regra.get("value")
 
     if tipo_regra == "exato":
-        return nome_trilha == regra
+        return nome_trilha == regra_valor
     if tipo_regra == "comeca":
-        return nome_trilha.startswith(regra)
+        return nome_trilha.startswith(regra_valor)
     if tipo_regra == "termina":
-        return nome_trilha.endswith(regra)
+        return nome_trilha.endswith(regra_valor)
     if tipo_regra == "contem":
-        return regra in nome_trilha
+        return regra_valor in nome_trilha
     if tipo_regra == "regex":
-        return re.fullmatch(regra, nome_trilha) is not None
+        return re.fullmatch(regra_valor, nome_trilha) is not None
     
     return False
 
 def valida_id_trilhas(eaf: pympi.Elan.Eaf, regras: Dict[str, Any]) -> Tuple[bool, List[str], Optional[Dict[str, str]]]:
     """
-    Valida as trilhas (tiers) de um objeto Eaf contra um conjunto de regras.
-    Retorna (Sucesso, ListaDeErros, MapeamentoDeConteudo).
+    Valida as trilhas (tiers) de um objeto Eaf contra um conjunto de regras estruturais.
+
+    Verifica a quantidade de trilhas, formatação (maiúsculas) e aplica regras de correspondência 
+    permitindo trilhas opcionais e intervalos de quantidade.
+
+    :param eaf: Objeto Eaf carregado via pympi.
+    :type eaf: pympi.Elan.Eaf
+    :param regras: Dicionário contendo configurações como 'num_trilhas', 'maiusculas' e 'regras_trilhas'.
+    :type regras: Dict[str, Any]
+    :return: Uma tupla contendo (Sucesso, ListaDeErros, MapeamentoDeConteudo).
+    :rtype: Tuple[bool, List[str], Optional[Dict[str, str]]]
     """
     trilhas_presentes = list(eaf.get_tier_names())
     erros = []
@@ -36,7 +53,27 @@ def valida_id_trilhas(eaf: pympi.Elan.Eaf, regras: Dict[str, Any]) -> Tuple[bool
     num_trilhas_esperado = regras.get("num_trilhas")
     num_trilhas_encontrado = len(trilhas_presentes)
     
-    if num_trilhas_esperado is not None and num_trilhas_encontrado != num_trilhas_esperado:
+    # Lógica de validação de quantidade flexível
+    qtd_valida = True
+    if num_trilhas_esperado is not None:
+        if isinstance(num_trilhas_esperado, int):
+            if num_trilhas_encontrado != num_trilhas_esperado:
+                qtd_valida = False
+        elif isinstance(num_trilhas_esperado, str):
+            # Parser simples para operadores: >1, >=2, <5, etc.
+            match = re.match(r'([<>]=?|==)?\s*(\d+)', num_trilhas_esperado)
+            if match:
+                op, val = match.groups()
+                val = int(val)
+                if op == '>' and not (num_trilhas_encontrado > val): qtd_valida = False
+                elif op == '>=' and not (num_trilhas_encontrado >= val): qtd_valida = False
+                elif op == '<' and not (num_trilhas_encontrado < val): qtd_valida = False
+                elif op == '<=' and not (num_trilhas_encontrado <= val): qtd_valida = False
+                elif (op == '==' or op is None) and not (num_trilhas_encontrado == val): qtd_valida = False
+            else:
+                erros.append(f"Formato de regra 'num_trilhas' inválido: {num_trilhas_esperado}")
+
+    if not qtd_valida:
         erros.append(f"Número incorreto de trilhas. Esperado: {num_trilhas_esperado}, Encontrado: {num_trilhas_encontrado}.")
         erros.append(f"   Trilhas presentes: {trilhas_presentes}")
         
@@ -49,41 +86,80 @@ def valida_id_trilhas(eaf: pympi.Elan.Eaf, regras: Dict[str, Any]) -> Tuple[bool
     if not regras_trilhas:
         return (not erros, erros, None)
 
-    num_regras_trilha = len(regras_trilhas)
-
-    if num_trilhas_encontrado != num_regras_trilha:
-        erros.append(f"O número de trilhas ({num_trilhas_encontrado}) não corresponde ao número de regras de trilha ({num_regras_trilha}).")
+    # Validar se há trilhas suficientes para cobrir as regras obrigatórias
+    num_mandatorias = sum(1 for r in regras_trilhas if r.get("mandatory", True))
+    if num_trilhas_encontrado < num_mandatorias:
+        erros.append(f"Número de trilhas encontradas ({num_trilhas_encontrado}) é menor que o número de regras obrigatórias ({num_mandatorias}).")
         return (False, erros, None)
-        
+
+    # Lógica de Combinação + Permutação para suportar regras opcionais
+    # Se temos 2 trilhas e 3 regras (1 opcional), precisamos achar qual subconjunto de 2 regras satisfaz as trilhas.
+    
     permutacao_valida = False
-    for perm in permutations(trilhas_presentes):
-        status_permutacao = True
-        mapeamento_temp = {}
+    indices_regras = range(len(regras_trilhas))
+    
+    # Itera sobre todas as combinações de regras que tenham o mesmo tamanho das trilhas encontradas
+    # Ex: Se achei 2 trilhas, testo todas as combinações de 2 regras disponíveis.
+    for subset_indices in combinations(indices_regras, num_trilhas_encontrado):
         
-        for i, nome_trilha in enumerate(perm):
-            rule = regras_trilhas[i]
-            if not _valida_regra(nome_trilha, rule):
-                status_permutacao = False
-                break 
+        # Verifica se as regras que NÃO foram escolhidas são todas opcionais
+        indices_ignorados = set(indices_regras) - set(subset_indices)
+        regras_ignoradas_sao_opcionais = all(
+            not regras_trilhas[idx].get("mandatory", True) for idx in indices_ignorados
+        )
+        
+        if not regras_ignoradas_sao_opcionais:
+            continue # Essa combinação ignorou uma regra obrigatória, então é inválida
             
-            content_type = rule.get("content_type")
-            if content_type:
-                mapeamento_temp[nome_trilha] = content_type
+        # Pega o subconjunto de regras para testar contra as trilhas
+        subset_regras = [regras_trilhas[i] for i in subset_indices]
         
-        if status_permutacao:
-            permutacao_valida = True
-            mapeamento_conteudo = mapeamento_temp
-            break 
+        # Aqui entra a lógica original de permutação para alinhar trilhas com as regras escolhidas
+        for perm in permutations(trilhas_presentes):
+            status_permutacao = True
+            mapeamento_temp = {}
+            
+            for i, nome_trilha in enumerate(perm):
+                rule = subset_regras[i]
+                if not _valida_regra(nome_trilha, rule):
+                    status_permutacao = False
+                    break 
+                
+                content_type = rule.get("content_type")
+                if content_type:
+                    mapeamento_temp[nome_trilha] = content_type
+            
+            if status_permutacao:
+                permutacao_valida = True
+                mapeamento_conteudo = mapeamento_temp
+                break 
+        
+        if permutacao_valida:
+            break
 
     if not permutacao_valida:
-        erros.append("Não foi encontrada uma combinação válida que satisfaça todas as regras de trilha.")
+        erros.append("Não foi encontrada uma combinação válida que satisfaça todas as regras de trilha (considerando obrigatórias/opcionais).")
         erros.append(f"   Trilhas Encontradas: {trilhas_presentes}")
-        erros.append(f"   Regras a aplicar: {regras_trilhas}")
+        
+    # Limpa erros se a permutação foi válida, mas erros de qtd/maiuscula podem persistir
+    sucesso = permutacao_valida and not any(e for e in erros if "Número incorreto" in e or "maiúsculas" in e)
+    
+    # Se a permutação falhou, mantemos todos os erros. Se passou, limpamos erros espúrios de lógica anterior se houver.
+    if permutacao_valida:
+         # Filtra apenas erros que não sejam sobre a combinação
+         erros = [e for e in erros if "combinação válida" not in e]
 
-    return (not erros, erros, mapeamento_conteudo if not erros else None)
+    return (sucesso, erros, mapeamento_conteudo if sucesso else None)
    
 def _valida_conteudo_disf(valor: str) -> List[str]:
-    """Valida o conteúdo de uma anotação de uma trilha DISF, retornando códigos de erro."""
+    """
+    Valida o conteúdo de uma anotação de uma trilha DISF.
+
+    :param valor: O texto da anotação.
+    :type valor: str
+    :return: Lista de códigos de erro encontrados.
+    :rtype: List[str]
+    """
     erros = []
     
     if valor == '(EST)' or valor == '(HES)':
@@ -104,7 +180,16 @@ def _valida_conteudo_disf(valor: str) -> List[str]:
     return erros
 
 def _valida_conteudo_inf_doc(valor: str) -> List[str]:
-    """Valida o conteúdo de uma anotação INF/DOC, retornando códigos de erro."""
+    """
+    Valida o conteúdo de uma anotação do tipo INF ou DOC.
+
+    Verifica presença de dígitos, disfluências mal posicionadas e caracteres inválidos.
+
+    :param valor: O texto da anotação.
+    :type valor: str
+    :return: Lista de códigos de erro encontrados.
+    :rtype: List[str]
+    """
     erros = []
     
     if re.search(r'\d', valor):
@@ -121,6 +206,10 @@ def _valida_conteudo_inf_doc(valor: str) -> List[str]:
         if h.strip() == '?':
             continue
             
+        padrao_caracteres_invalidos = r'[^a-zA-Zá-úÁ-Ú\s\(\)\?\/\-"çÇàÀ-]'
+        caracteres_invalidos = re.findall(padrao_caracteres_invalidos, valor)
+    
+    # Nota: o código original verificava caracteres_invalidos fora do loop, mantive a lógica
     padrao_caracteres_invalidos = r'[^a-zA-Zá-úÁ-Ú\s\(\)\?\/\-"çÇàÀ-]'
     caracteres_invalidos = re.findall(padrao_caracteres_invalidos, valor)
     
@@ -133,6 +222,14 @@ def _valida_conteudo_inf_doc(valor: str) -> List[str]:
 def valida_conteudo_trilhas(eaf: pympi.Elan.Eaf, regras_mapeamento: Dict[str, str]) -> Tuple[bool, List[str]]:
     """
     Valida o CONTEÚDO das anotações em um EAF com base em um mapeamento de regras.
+
+    :param eaf: Objeto Eaf carregado.
+    :type eaf: pympi.Elan.Eaf
+    :param regras_mapeamento: Dicionário mapeando {nome_da_trilha: tipo_de_conteudo}.
+                              Ex: {'Trilha1': 'INF', 'Trilha2': 'DISF'}
+    :type regras_mapeamento: Dict[str, str]
+    :return: Tupla contendo (Sucesso, ListaDeRelatorio).
+    :rtype: Tuple[bool, List[str]]
     """
     
     erros_agrupados = collections.defaultdict(list)
