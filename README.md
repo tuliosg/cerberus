@@ -19,11 +19,13 @@ Documentações, relatórios e manuscritos relacionados ao repositório.
 ### 📄 `requirements.txt`
 Dependências para executar os códigos da pasta `src`.
 
+<!--
 ## Como citar?
 Para citar este trabalho, utilize a referência abaixo, o botão "Cite this repository" (na seção **About** à direita) ou [acesse o artigo completo](https://doi.org/10.48550/).
 ```
 Insira a referência BibTex aqui. 
 ```
+-->
 
 ## Agradecimentos
 Gostaríamos de expressar nossa sincera gratidão à infraestrutura e à equipe do Laboratório Multiusuário de Informática e Documentação Linguística ([LAMID](https://github.com/lamid-ufs)) pelo apoio ao longo deste projeto.
