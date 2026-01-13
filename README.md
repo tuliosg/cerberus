@@ -1,6 +1,6 @@
   <a align="left" href="https://doi.org/10.5281/zenodo.18213586">
     <img src="https://zenodo.org/badge/1085318314.svg" alt="DOI">
-  </a>
+    </a>
   <a href="lamid.ufs.br"><img  align="right" src="https://github.com/lamid-ufs/ASPBr/blob/6508a5eb2548ba68c98749f7ceb916bb05da0317/src/streamlit/imgs/lamid-logo-full.png?raw=true" alt="LAMID" height="34" /></a> 
   <br/>
 
